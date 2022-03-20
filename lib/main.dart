@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+const int a = 97;
 void main() {
   runApp(const MyApp());
 }
@@ -58,9 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
   List<Exercise> data = [];
   _MyHomePageState() {
-    for (var element in inputData) {
-      data.add(Exercise.fromJson(element));
-    }
+    data = getExercisesFromJson(inputData);
   }
   @override
   Widget build(BuildContext context) {
@@ -76,11 +75,10 @@ class _MyHomePageState extends State<MyHomePage> {
           itemBuilder: (BuildContext context, int index) {
             return Padding(
               key: Key('$index'),
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                key: Key('$index'),
-                children: [
-                  data[index].prefix != ''
+              padding: const EdgeInsets.all(8.0),
+              child: data[index].id == -1
+                  ? Text('${data[index].order}:')
+                  : data[index].prefix != ''
                       ? Padding(
                           padding: const EdgeInsets.fromLTRB(40, 0, 0, 0),
                           child: Text(
@@ -88,21 +86,86 @@ class _MyHomePageState extends State<MyHomePage> {
                         )
                       : Text(
                           '${data[index].order}: упражнение №${data[index].id}'),
-                ],
-              ),
             );
           },
           onReorder: (int oldIndex, int newIndex) {
-            setState(() {
-              if (oldIndex < newIndex) {
-                newIndex -= 1;
-              }
-              final item = data.removeAt(oldIndex);
-              data.insert(newIndex, item);
-            });
+            if (data[oldIndex].id != -1) {
+              setState(() {
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+
+                processMoved(oldIndex, newIndex);
+              });
+            }
           },
         ));
   }
+
+  void processMoved(int oldPos, int newPos) {
+    var obj = data.removeAt(oldPos);
+    for (var i = oldPos + 1; i < data.length; i++) {
+      data[i].order--;
+    }
+    insertMoved(obj, newPos);
+  }
+
+  void insertMoved(Exercise moved, int newPos) {
+    data.insert(newPos, moved);
+    if (newPos == 0) {
+      data[newPos].order = 1;
+      for (var i = newPos + 1; i < data.length; i++) {
+        data[i].order++;
+      }
+    } else if (newPos == data.length) {
+      data[newPos].order = data[newPos - 1].order++;
+    } else if (data[newPos + 1].prefix == '' && data[newPos - 1].prefix == '') {
+      data[newPos].order = data[newPos + 1].order;
+      for (var i = newPos + 1; i < data.length; i++) {
+        data[i].order++;
+      }
+    } else if ((data[newPos + 1].prefix != '' &&
+            data[newPos - 1].prefix == '') ||
+        data[newPos + 1].prefix == '' && data[newPos - 1].prefix != '') {
+      data[newPos].order = data[newPos - 1].order;
+      for (var i = data.lastIndexWhere(
+                  (element) => element.order == data[newPos].order) +
+              1;
+          i < data.length;
+          i++) {
+        data[i].order++;
+      }
+    }
+
+    placeNewPrefixes();
+  }
+
+  void placeNewPrefixes() {
+    for (var i = 1; i < data.length; i++) {
+      if (data[i - 1].order == data[i].order || data[i - 1].id == -1) {
+        if (data[i - 1].prefix == '') {
+          data[i].prefix = String.fromCharCode(a);
+        } else {
+          data[i].prefix =
+              String.fromCharCode(data[i - 1].prefix.codeUnits.first + 1);
+        }
+      } else {
+        data[i].prefix = '';
+      }
+    }
+  }
+}
+
+List<Exercise> getExercisesFromJson(List<Map<String, dynamic>> json) {
+  List<Exercise> result = [];
+  for (var item in json) {
+    var exercise = Exercise.fromJson(item);
+    if (exercise.prefix == 'a') {
+      result.add(Exercise(id: -1, order: exercise.order, prefix: ''));
+    }
+    result.add(exercise);
+  }
+  return result;
 }
 
 class Exercise {
@@ -169,4 +232,14 @@ List<ExerciseGroup> groupsFromJson(List<Map<String, dynamic>> inputList) {
     }
   }
   return result;
+}
+
+int numOfGroups(List<Exercise> input) {
+  int res = 0;
+  for (var i = 0; i < input.length - 1; i++) {
+    if (input[i].prefix == '' && input[i + 1].prefix != '') {
+      res++;
+    }
+  }
+  return res;
 }
