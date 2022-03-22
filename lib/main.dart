@@ -105,13 +105,15 @@ class _MyHomePageState extends State<MyHomePage> {
           },
           onReorder: (int oldIndex, int newIndex) {
             if (data[oldIndex].id != -1) {
-              setState(() {
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
+              if (!data[oldIndex].addedWithButton) {
+                setState(() {
+                  if (oldIndex < newIndex) {
+                    newIndex -= 1;
+                  }
 
-                processMoved(oldIndex, newIndex);
-              });
+                  processMoved(oldIndex, newIndex);
+                });
+              }
             }
           },
         ));
@@ -123,16 +125,17 @@ class _MyHomePageState extends State<MyHomePage> {
       for (var i = oldPos; i < data.length; i++) {
         data[i].order--;
       }
-    } else if (oldPos - 1 > 0 &&
-        data.lastIndexWhere((element) => element.order == obj.order) - 1 ==
-            data.indexWhere((element) =>
-                element.id == -1 && element.order == element.order)) {
-      data.removeWhere(
-          (element) => element.id == -1 && element.order == element.order);
+    } else if (oldPos > 0 &&
+        data.lastIndexWhere((element) => element.order == obj.order) -
+                data.indexWhere((element) =>
+                    element.id == -1 && element.order == obj.order) <
+            2) {
       obj.prefix = '';
-      for (var i = oldPos - 1; i < data.length; i++) {
-        data[i].order--;
-      }
+      newPos--;
+      data.removeWhere((element) =>
+          element.id == -1 &&
+          element.order == obj.order &&
+          element.addedWithButton == false);
     }
 
     insertMoved(obj, newPos, oldPos);
@@ -146,22 +149,15 @@ class _MyHomePageState extends State<MyHomePage> {
         data[i].order++;
       }
     } else if (newPos + 1 == data.length) {
-      data[newPos].order = data[newPos - 1].order++;
+      data[newPos].order = data[newPos - 1].order + 1;
     } else if (data[newPos + 1].prefix == '' && data[newPos - 1].prefix == '' ||
         data[newPos + 1].prefix == '' && data[newPos - 1].prefix != '') {
       data[newPos].order = data[newPos + 1].order;
       for (var i = newPos + 1; i < data.length; i++) {
         data[i].order++;
       }
-    } else if ((data[newPos + 1].prefix != '' && data[newPos - 1].id != -1)) {
+    } else if ((data[newPos + 1].prefix != '')) {
       data[newPos].order = data[newPos - 1].order;
-      for (var i = data.lastIndexWhere(
-                  (element) => element.order == data[newPos].order) +
-              1;
-          i < data.length;
-          i++) {
-        data[i].order++;
-      }
     }
 
     placeNewPrefixes();
@@ -173,6 +169,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     for (var i = 1; i < data.length; i++) {
       if (data[i - 1].order == data[i].order || data[i - 1].id == -1) {
+        if (data[i].addedWithButton) {
+          data[i].addedWithButton = !data[i].addedWithButton;
+        }
         if (data[i - 1].prefix == '') {
           data[i].prefix = String.fromCharCode(a);
         } else {
@@ -186,10 +185,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void processExercisePropetiesChoice(
-      ExercisePropetiesChoice choice, int selctedIndex) {
+      ExercisePropetiesChoice choice, int selectedIndex) {
     setState(() {
-      data.insert(selctedIndex,
-          Exercise(id: -1, order: data[selctedIndex].order, prefix: ''));
+      data.insert(
+          selectedIndex,
+          Exercise(
+            id: -1,
+            order: data[selectedIndex].order,
+            prefix: '',
+          ));
+      data[selectedIndex + 1].prefix = 'a';
       placeNewPrefixes();
     });
   }
@@ -211,10 +216,12 @@ class Exercise {
   int id;
   int order;
   String prefix;
+  bool addedWithButton;
   Exercise({
     required this.id,
     required this.order,
     required this.prefix,
+    this.addedWithButton = false,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
@@ -232,55 +239,6 @@ class Exercise {
         'order': order,
         'order_prefix': prefix,
       };
-}
-
-class ExerciseGroup {
-  List<Exercise> exercises;
-  ExerciseGroup({
-    required this.exercises,
-  });
-
-  factory ExerciseGroup.fromJson(List<Map<String, dynamic>> json) =>
-      ExerciseGroup(exercises: json.map((e) => Exercise.fromJson(e)).toList());
-
-  bool isSingle() {
-    return exercises.length > 1 || exercises.isEmpty ? false : true;
-  }
-
-  List<Map<String, dynamic>> toJson() =>
-      exercises.map((e) => e.toJson()).toList();
-}
-
-List<ExerciseGroup> groupsFromJson(List<Map<String, dynamic>> inputList) {
-  List<Exercise> rawExercise = [];
-  List<ExerciseGroup> result = [];
-  for (var element in inputList) {
-    rawExercise.add(Exercise.fromJson(element));
-  }
-  int i = 0;
-  while (i < rawExercise.length) {
-    int lastExerciseIndex = rawExercise
-        .lastIndexWhere((exercise) => exercise.order == rawExercise[i].order);
-    if (lastExerciseIndex != i) {
-      result.add(
-          ExerciseGroup(exercises: rawExercise.sublist(i, lastExerciseIndex)));
-      i = lastExerciseIndex + 1;
-    } else {
-      result.add(ExerciseGroup(exercises: [rawExercise[i]]));
-      i++;
-    }
-  }
-  return result;
-}
-
-int numOfGroups(List<Exercise> input) {
-  int res = 0;
-  for (var i = 0; i < input.length - 1; i++) {
-    if (input[i].prefix == '' && input[i + 1].prefix != '') {
-      res++;
-    }
-  }
-  return res;
 }
 
 enum ExercisePropetiesChoice {
