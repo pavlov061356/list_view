@@ -74,19 +74,34 @@ class _MyHomePageState extends State<MyHomePage> {
           itemCount: data.length,
           itemBuilder: (BuildContext context, int index) {
             return Padding(
-              key: Key('$index'),
-              padding: const EdgeInsets.all(8.0),
-              child: data[index].id == -1
-                  ? Text('${data[index].order}:')
-                  : data[index].prefix != ''
-                      ? Padding(
-                          padding: const EdgeInsets.fromLTRB(40, 0, 0, 0),
-                          child: Text(
-                              '${data[index].prefix}: упражнение №${data[index].id}'),
+                key: Key('$index'),
+                padding: const EdgeInsets.all(8.0),
+                child: Row(children: [
+                  data[index].id == -1
+                      ? Text('${data[index].order}:')
+                      : data[index].prefix != ''
+                          ? Padding(
+                              padding: const EdgeInsets.fromLTRB(40, 0, 0, 0),
+                              child: Text(
+                                  '${data[index].prefix}: упражнение №${data[index].id}'),
+                            )
+                          : Text(
+                              '${data[index].order}: упражнение №${data[index].id}'),
+                  data[index].id != -1 && data[index].prefix == ''
+                      ? PopupMenuButton<ExercisePropetiesChoice>(
+                          onSelected: (ExercisePropetiesChoice result) {
+                            processExercisePropetiesChoice(result, index);
+                          },
+                          itemBuilder: (BuildContext context) =>
+                              <PopupMenuEntry<ExercisePropetiesChoice>>[
+                            const PopupMenuItem<ExercisePropetiesChoice>(
+                              value: ExercisePropetiesChoice.addGroup,
+                              child: Text('Создать группу'),
+                            ),
+                          ],
                         )
-                      : Text(
-                          '${data[index].order}: упражнение №${data[index].id}'),
-            );
+                      : Container()
+                ]));
           },
           onReorder: (int oldIndex, int newIndex) {
             if (data[oldIndex].id != -1) {
@@ -104,29 +119,41 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void processMoved(int oldPos, int newPos) {
     var obj = data.removeAt(oldPos);
-    for (var i = oldPos + 1; i < data.length; i++) {
-      data[i].order--;
+    if (obj.prefix == '') {
+      for (var i = oldPos; i < data.length; i++) {
+        data[i].order--;
+      }
+    } else if (oldPos - 1 > 0 &&
+        data.lastIndexWhere((element) => element.order == obj.order) - 1 ==
+            data.indexWhere((element) =>
+                element.id == -1 && element.order == element.order)) {
+      data.removeWhere(
+          (element) => element.id == -1 && element.order == element.order);
+      obj.prefix = '';
+      for (var i = oldPos - 1; i < data.length; i++) {
+        data[i].order--;
+      }
     }
-    insertMoved(obj, newPos);
+
+    insertMoved(obj, newPos, oldPos);
   }
 
-  void insertMoved(Exercise moved, int newPos) {
+  void insertMoved(Exercise moved, int newPos, int oldPos) {
     data.insert(newPos, moved);
     if (newPos == 0) {
       data[newPos].order = 1;
       for (var i = newPos + 1; i < data.length; i++) {
         data[i].order++;
       }
-    } else if (newPos == data.length) {
+    } else if (newPos + 1 == data.length) {
       data[newPos].order = data[newPos - 1].order++;
-    } else if (data[newPos + 1].prefix == '' && data[newPos - 1].prefix == '') {
+    } else if (data[newPos + 1].prefix == '' && data[newPos - 1].prefix == '' ||
+        data[newPos + 1].prefix == '' && data[newPos - 1].prefix != '') {
       data[newPos].order = data[newPos + 1].order;
       for (var i = newPos + 1; i < data.length; i++) {
         data[i].order++;
       }
-    } else if ((data[newPos + 1].prefix != '' &&
-            data[newPos - 1].prefix == '') ||
-        data[newPos + 1].prefix == '' && data[newPos - 1].prefix != '') {
+    } else if ((data[newPos + 1].prefix != '' && data[newPos - 1].id != -1)) {
       data[newPos].order = data[newPos - 1].order;
       for (var i = data.lastIndexWhere(
                   (element) => element.order == data[newPos].order) +
@@ -141,6 +168,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void placeNewPrefixes() {
+    if (data.first.id != -1) {
+      data.first.prefix = '';
+    }
     for (var i = 1; i < data.length; i++) {
       if (data[i - 1].order == data[i].order || data[i - 1].id == -1) {
         if (data[i - 1].prefix == '') {
@@ -153,6 +183,15 @@ class _MyHomePageState extends State<MyHomePage> {
         data[i].prefix = '';
       }
     }
+  }
+
+  void processExercisePropetiesChoice(
+      ExercisePropetiesChoice choice, int selctedIndex) {
+    setState(() {
+      data.insert(selctedIndex,
+          Exercise(id: -1, order: data[selctedIndex].order, prefix: ''));
+      placeNewPrefixes();
+    });
   }
 }
 
@@ -242,4 +281,8 @@ int numOfGroups(List<Exercise> input) {
     }
   }
   return res;
+}
+
+enum ExercisePropetiesChoice {
+  addGroup,
 }
