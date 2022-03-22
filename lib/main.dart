@@ -88,17 +88,20 @@ class _MyHomePageState extends State<MyHomePage> {
                           : Text(
                               '${data[index].order}: упражнение №${data[index].id}'),
                   data[index].id != -1 && data[index].prefix == ''
-                      ? PopupMenuButton<ExercisePropetiesChoice>(
-                          onSelected: (ExercisePropetiesChoice result) {
-                            processExercisePropetiesChoice(result, index);
-                          },
-                          itemBuilder: (BuildContext context) =>
-                              <PopupMenuEntry<ExercisePropetiesChoice>>[
-                            const PopupMenuItem<ExercisePropetiesChoice>(
-                              value: ExercisePropetiesChoice.addGroup,
-                              child: Text('Создать группу'),
-                            ),
-                          ],
+                      ? Align(
+                          alignment: Alignment.centerRight,
+                          child: PopupMenuButton<ExercisePropetiesChoice>(
+                            onSelected: (ExercisePropetiesChoice result) {
+                              processExercisePropetiesChoice(result, index);
+                            },
+                            itemBuilder: (BuildContext context) =>
+                                <PopupMenuEntry<ExercisePropetiesChoice>>[
+                              const PopupMenuItem<ExercisePropetiesChoice>(
+                                value: ExercisePropetiesChoice.addGroup,
+                                child: Text('Создать группу'),
+                              ),
+                            ],
+                          ),
                         )
                       : Container()
                 ]));
