@@ -77,7 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: writeData,
-          child: Icon(Icons.add),
+          child: const Icon(Icons.add),
         ),
         body: ReorderableListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -165,7 +165,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var obj = data.removeAt(_oldPos);
     if (obj.prefix == '') {
       //В том случае, если упражнение являлось самостоятельным, необходимо при
-      //его удалении для всех следующих после него элементов уменьшиьб их порядковый
+      //его удалении для всех следующих после него элементов уменьшить их порядковый
       // номер, далее он будет увеличен в зависимости от того, куда будет вставлен сам элемент
       for (var i = _oldPos; i < data.length; i++) {
         data[i].order--;
@@ -177,13 +177,16 @@ class _MyHomePageState extends State<MyHomePage> {
       // В том случае, если из группы с 2 элементами удаляется один из
       //элементов, группу надо удалить
       obj.prefix = '';
-      if (_newPos > 0) {
-        _newPos--;
-      }
-      data.removeWhere((element) =>
+
+      int groupInd = data.indexWhere((element) =>
           element.id == -1 &&
           element.order == obj.order &&
           element.addedWithButton == false);
+      data.removeAt(groupInd);
+      data[groupInd].prefix = '';
+      if (groupInd < _newPos) {
+        _newPos--;
+      }
     }
     return obj;
   }
@@ -201,12 +204,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     } else if (_newPos + 1 == data.length) {
       // Вставка в конец ставит порядковый
-      //номер на единицу больше пердыдущего
+      //номер на единицу больше предыдущего
       data[_newPos].order = data[_newPos - 1].order + 1;
     } else if (data[_newPos + 1].prefix == '' &&
             data[_newPos - 1].prefix == '' ||
         data[_newPos + 1].prefix == '' && data[_newPos - 1].prefix != '') {
-      // Вставка занятия не в группу, и увеличение порчдкового номера
+      // Вставка занятия не в группу, и увеличение порядкового номера
       // у всех последующих элементов
       data[_newPos].order = data[_newPos + 1].order;
       for (var i = _newPos + 1; i < data.length; i++) {
@@ -261,6 +264,14 @@ class _MyHomePageState extends State<MyHomePage> {
             prefix: '',
           ));
       data[selectedIndex + 1].prefix = 'a';
+      if (selectedIndex + 2 < data.length) {
+        if (data[selectedIndex + 2].prefix == '' &&
+            data[selectedIndex + 2].id != -1) {
+          for (var i = selectedIndex + 2; i < data.length; i++) {
+            data[i].order--;
+          }
+        }
+      }
       placeNewPrefixes();
     });
   }
@@ -291,7 +302,9 @@ String exercisesToJson(List<Exercise> input) {
             input.lastIndexWhere((element) => element.order == item.order);
         int firstIndex =
             input.indexWhere((element) => element.order == item.order);
-        if (firstIndex != lastIndex) {
+        if (firstIndex + 1 != lastIndex) {
+          outputJson.add(item.toJson());
+        } else {
           outputJson.add(item.copyWithoutPrefix().toJson());
         }
       } else {
